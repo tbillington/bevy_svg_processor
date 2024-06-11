@@ -1,0 +1,28 @@
+[package]
+name = "bevy_svg_processor"
+version = "0.1.0"
+edition = "2021"
+
+[features]
+default_8x8 = []
+default_16x16 = []
+default_32x32 = []
+default_64x64 = []
+default_128x128 = []
+default_256x256 = []
+default_512x512 = []
+default_1024x1024 = []
+
+[dependencies]
+bevy_app = { version = "0.13.0", default-features = false }
+bevy_asset = { version = "0.13.0", default-features = false }
+bevy_ecs = { version = "0.13.0", default-features = false }
+bevy_reflect = { version = "0.13.0", default-features = false }
+bevy_render = { version = "0.13.0", default-features = false }
+bevy_utils = { version = "0.13.0", default-features = false }
+
+resvg = { version = "0.42.0", default-features = false }
+serde = "1.0.0"
+tiny-skia = "0.11.0"
+usvg = { version = "0.42.0", default-features = false }
+image = { version = "0.25.0", default-features = false, features = ["png"] }
