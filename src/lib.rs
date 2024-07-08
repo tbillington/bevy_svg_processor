@@ -29,7 +29,7 @@ impl Plugin for SvgProcessorPlugin {
 
         app.register_asset_loader(SvgLoader);
 
-        let svg_procssor = SvgToPngProcessor::from_world(&mut app.world);
+        let svg_procssor = SvgToPngProcessor::from_world(app.world_mut());
 
         type PreprocessedSvgToPng = LoadTransformAndSave<SvgLoader, SvgToPngProcessor, PngSaver>;
 
@@ -87,20 +87,18 @@ impl AssetLoader for SvgLoader {
 
     type Error = std::io::Error;
 
-    fn load<'a>(
+    async fn load<'a>(
         &'a self,
-        reader: &'a mut bevy_asset::io::Reader,
+        reader: &'a mut bevy_asset::io::Reader<'_>,
         _settings: &'a Self::Settings,
-        _load_context: &'a mut bevy_asset::LoadContext,
-    ) -> BoxedFuture<'a, Result<Self::Asset, Self::Error>> {
-        Box::pin(async move {
-            let mut bytes = Vec::new();
-            reader.read_to_end(&mut bytes).await?;
-            let svg_tree = usvg::Tree::from_data(&bytes, &usvg::Options::default()).unwrap();
-            Ok(SvgAsset {
-                svg_tree,
-                output_size: _settings.output_size,
-            })
+        _load_context: &'a mut bevy_asset::LoadContext<'_>,
+    ) -> Result<Self::Asset, Self::Error> {
+        let mut bytes = Vec::new();
+        reader.read_to_end(&mut bytes).await?;
+        let svg_tree = usvg::Tree::from_data(&bytes, &usvg::Options::default()).unwrap();
+        Ok(SvgAsset {
+            svg_tree,
+            output_size: _settings.output_size,
         })
     }
 
@@ -153,39 +151,37 @@ impl AssetTransformer for SvgToPngProcessor {
 
     type Error = std::io::Error;
 
-    fn transform<'a>(
+    async fn transform<'a>(
         &'a self,
         asset: TransformedAsset<Self::AssetInput>,
         settings: &'a Self::Settings,
-    ) -> BoxedFuture<'a, Result<TransformedAsset<Self::AssetOutput>, Self::Error>> {
-        Box::pin(async move {
-            let tree = &asset.svg_tree;
+    ) -> Result<TransformedAsset<Self::AssetOutput>, Self::Error> {
+        let tree = &asset.svg_tree;
 
-            let tree_size = tree.size();
-            let (width, height) = asset.output_size;
+        let tree_size = tree.size();
+        let (width, height) = asset.output_size;
 
-            let mut pixmap = tiny_skia::Pixmap::new(width, height).unwrap();
-            let tns = tiny_skia::Transform::from_scale(
-                width as f32 / tree_size.width(),
-                height as f32 / tree_size.height(),
-            );
-            resvg::render(&tree, tns, &mut pixmap.as_mut());
-            let png = pixmap.encode_png().unwrap();
+        let mut pixmap = tiny_skia::Pixmap::new(width, height).unwrap();
+        let tns = tiny_skia::Transform::from_scale(
+            width as f32 / tree_size.width(),
+            height as f32 / tree_size.height(),
+        );
+        resvg::render(tree, tns, &mut pixmap.as_mut());
+        let png = pixmap.encode_png().unwrap();
 
-            let img = Image::from_buffer(
-                &png,
-                ImageType::Extension("png"),
-                self.supported_compressed_formats,
-                settings.is_srgb,
-                settings.sampler.clone(),
-                settings.asset_usage,
-            )
-            .unwrap();
+        let img = Image::from_buffer(
+            &png,
+            ImageType::Extension("png"),
+            self.supported_compressed_formats,
+            settings.is_srgb,
+            settings.sampler.clone(),
+            settings.asset_usage,
+        )
+        .unwrap();
 
-            let asset = asset.replace_asset(img);
+        let asset = asset.replace_asset(img);
 
-            Ok(asset)
-        })
+        Ok(asset)
     }
 }
 
@@ -200,33 +196,31 @@ impl AssetSaver for PngSaver {
 
     type Error = std::io::Error;
 
-    fn save<'a>(
+    async fn save<'a>(
         &'a self,
         writer: &'a mut bevy_asset::io::Writer,
         asset: SavedAsset<'a, Self::Asset>,
         _settings: &'a Self::Settings,
-    ) -> BoxedFuture<'a, Result<<Self::OutputLoader as AssetLoader>::Settings, Self::Error>> {
-        Box::pin(async move {
-            let mut bytes_buf = std::io::Cursor::new(Vec::new());
+    ) -> Result<<Self::OutputLoader as AssetLoader>::Settings, Self::Error> {
+        let mut bytes_buf = std::io::Cursor::new(Vec::new());
 
-            image::write_buffer_with_format(
-                &mut bytes_buf,
-                &asset.data,
-                asset.width(),
-                asset.height(),
-                image::ExtendedColorType::Rgba8,
-                image::ImageFormat::Png,
-            )
-            .unwrap();
+        image::write_buffer_with_format(
+            &mut bytes_buf,
+            &asset.data,
+            asset.width(),
+            asset.height(),
+            image::ExtendedColorType::Rgba8,
+            image::ImageFormat::Png,
+        )
+        .unwrap();
 
-            writer.write_all(&bytes_buf.into_inner()).await?;
+        writer.write_all(&bytes_buf.into_inner()).await?;
 
-            Ok(ImageLoaderSettings {
-                format: ImageFormatSetting::Format(ImageFormat::Png),
-                is_srgb: asset.texture_descriptor.format.is_srgb(),
-                sampler: asset.sampler.clone(),
-                asset_usage: asset.asset_usage,
-            })
+        Ok(ImageLoaderSettings {
+            format: ImageFormatSetting::Format(ImageFormat::Png),
+            is_srgb: asset.texture_descriptor.format.is_srgb(),
+            sampler: asset.sampler.clone(),
+            asset_usage: asset.asset_usage,
         })
     }
 }

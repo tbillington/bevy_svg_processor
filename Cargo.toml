@@ -14,12 +14,12 @@ default_512x512 = []
 default_1024x1024 = []
 
 [dependencies]
-bevy_app = { version = "0.13.0", default-features = false }
-bevy_asset = { version = "0.13.0", default-features = false }
-bevy_ecs = { version = "0.13.0", default-features = false }
-bevy_reflect = { version = "0.13.0", default-features = false }
-bevy_render = { version = "0.13.0", default-features = false }
-bevy_utils = { version = "0.13.0", default-features = false }
+bevy_app = { version = "0.14.0", default-features = false }
+bevy_asset = { version = "0.14.0", default-features = false }
+bevy_ecs = { version = "0.14.0", default-features = false }
+bevy_reflect = { version = "0.14.0", default-features = false }
+bevy_render = { version = "0.14.0", default-features = false }
+bevy_utils = { version = "0.14.0", default-features = false }
 
 resvg = { version = "0.42.0", default-features = false }
 serde = "1.0.0"
